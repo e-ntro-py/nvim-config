@@ -15,6 +15,12 @@ end
 vim.opt.rtp:prepend(lazypath)
 
 -- check if firenvim is active
+-- macOS will reset the PATH when firenvim starts a nvim process, causing the PATH variable to change unexpectedly.
+-- Here we are trying to get the correct PATH and use it for firenvim.
+-- See also https://github.com/glacambre/firenvim/blob/master/TROUBLESHOOTING.md#make-sure-firenvims-path-is-the-same-as-neovims
+local path_env = vim.env.PATH
+local prologue = string.format('export PATH="%s"', path_env)
+
 local firenvim_not_active = function()
   return not vim.g.started_by_firenvim
 end
@@ -122,10 +128,10 @@ local plugin_specs = {
     },
   },
   {
-      'MeanderingProgrammer/markdown.nvim',
-      main = "render-markdown",
-      opts = {},
-      dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-tree/nvim-web-devicons' },
+    "MeanderingProgrammer/markdown.nvim",
+    main = "render-markdown",
+    opts = {},
+    dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-tree/nvim-web-devicons" },
   },
   -- A list of colorscheme plugin you may want to try. Find what suits you.
   { "navarasu/onedark.nvim", lazy = true },
@@ -170,7 +176,7 @@ local plugin_specs = {
   {
     "lukas-reineke/indent-blankline.nvim",
     event = "VeryLazy",
-    main = 'ibl',
+    main = "ibl",
     config = function()
       require("config.indent-blankline")
     end,
@@ -223,9 +229,9 @@ local plugin_specs = {
 
   -- Automatic insertion and deletion of a pair of characters
   {
-      'windwp/nvim-autopairs',
-      event = "InsertEnter",
-      config = true
+    "windwp/nvim-autopairs",
+    event = "InsertEnter",
+    config = true,
   },
 
   -- Comment plugin
@@ -317,7 +323,7 @@ local plugin_specs = {
   { "rhysd/committia.vim", lazy = true },
 
   {
-    "sindrets/diffview.nvim"
+    "sindrets/diffview.nvim",
   },
 
   {
@@ -419,17 +425,13 @@ local plugin_specs = {
   {
     "glacambre/firenvim",
     enabled = function()
-      if vim.g.is_win or vim.g.is_mac then
-        return true
-      end
-      return false
+      local result = vim.g.is_win or vim.g.is_mac
+      return result
     end,
-    build = function()
-      vim.fn["firenvim#install"](0)
-    end,
-    lazy = true,
+    -- it seems that we can only call the firenvim function directly.
+    -- Using vim.fn or vim.cmd to call this function will fail.
+    build = string.format(":call firenvim#install(0, '%s')", prologue),
   },
-
   -- Debugger plugin
   {
     "sakhnik/nvim-gdb",
@@ -495,13 +497,14 @@ local plugin_specs = {
   },
 }
 
--- configuration for lazy itself.
-local lazy_opts = {
+require("lazy").setup {
+  spec = plugin_specs,
   ui = {
     border = "rounded",
     title = "Plugin Manager",
     title_pos = "center",
   },
+  rocks = {
+    enabled = false
+  },
 }
-
-require("lazy").setup(plugin_specs, lazy_opts)
